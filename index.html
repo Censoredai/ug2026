@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEET UG Focus Tracker (Mobile Friendly)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; -webkit-tap-highlight-color: transparent; }
+        .glass-card { background: white; border: 1px solid #e2e8f0; border-radius: 1.25rem; transition: all 0.2s ease; }
+        .glass-card:active { transform: scale(0.98); }
+        .task-checkbox:checked + span { text-decoration: line-through; color: #94a3b8; }
+        .nav-active { color: #2563eb; }
+        
+        /* Modal Styles - Mobile Centered */
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100; backdrop-filter: blur(8px); }
+        .modal-content { 
+            position: fixed; 
+            bottom: 0; 
+            left: 0; 
+            right: 0; 
+            background: white; 
+            border-top-left-radius: 2rem; 
+            border-top-right-radius: 2rem; 
+            padding: 1.5rem; 
+            max-height: 85vh; 
+            overflow-y: auto; 
+            animation: slideUp 0.3s ease-out;
+        }
+        
+        @media (min-width: 768px) {
+            .modal-content {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                bottom: auto;
+                transform: translate(-50%, -50%);
+                width: 90%;
+                max-width: 500px;
+                border-radius: 2rem;
+            }
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+
+        /* Custom Scrollbar for better look on mobile */
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+        
+        .pulse-green { animation: pulse 2s infinite; }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+        }
+    </style>
+</head>
+<body class="pb-24 md:pb-0">
+
+    <!-- Detail Modal -->
+    <div id="subject-modal" class="modal-overlay" onclick="closeModal(event)">
+        <div class="modal-content shadow-2xl" onclick="event.stopPropagation()">
+            <div class="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-6 md:hidden"></div>
+            <div class="flex justify-between items-center mb-6">
+                <h3 id="modal-title" class="text-xl font-bold text-gray-800">Subject Details</h3>
+                <button onclick="closeModal()" class="p-2 hover:bg-gray-100 rounded-full bg-gray-50"><i data-lucide="x" size="20"></i></button>
+            </div>
+            <div class="space-y-6 pb-6">
+                <div>
+                    <h4 class="text-xs font-bold text-green-600 uppercase tracking-widest mb-3 flex items-center">
+                        <i data-lucide="check-circle" size="14" class="mr-2"></i> Padh Liya ✅
+                    </h4>
+                    <div id="modal-done-list" class="space-y-2 text-sm text-gray-700"></div>
+                </div>
+                <div>
+                    <h4 class="text-xs font-bold text-orange-500 uppercase tracking-widest mb-3 flex items-center">
+                        <i data-lucide="clock" size="14" class="mr-2"></i> Baki Hai ⏳
+                    </h4>
+                    <div id="modal-todo-list" class="space-y-2 text-sm text-gray-700"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-white border-b sticky top-0 z-[60] px-4 py-3">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-3 text-blue-600">
+                <i data-lucide="graduation-cap" size="24" class="md:w-7 md:h-7"></i>
+                <div>
+                    <h1 class="font-bold text-base md:text-lg leading-tight text-gray-800">NEET Focus</h1>
+                    <p class="text-[9px] text-gray-400 font-bold uppercase tracking-wider">2026 Engine</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-3">
+                <div class="flex items-center bg-orange-50 px-2.5 py-1 rounded-full border border-orange-100">
+                    <i data-lucide="flame" class="text-orange-500 w-3.5 h-3.5 mr-1"></i>
+                    <span class="text-[10px] md:text-xs font-bold text-orange-700" id="streak-count">0 Day</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation (Mobile Optimized) -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t z-50 md:hidden pb-safe">
+        <div class="flex justify-around h-16 items-center">
+            <button onclick="showSection('dashboard')" class="nav-btn flex flex-col items-center text-gray-400 transition-colors" data-id="dashboard">
+                <i data-lucide="home" size="22"></i><span class="text-[9px] mt-1 font-bold">Home</span>
+            </button>
+            <button onclick="showSection('daily-schedule')" class="nav-btn flex flex-col items-center text-gray-400 transition-colors" data-id="daily-schedule">
+                <i data-lucide="calendar" size="22"></i><span class="text-[9px] mt-1 font-bold">Plan</span>
+            </button>
+            <button onclick="showSection('targets')" class="nav-btn flex flex-col items-center text-gray-400 transition-colors" data-id="targets">
+                <i data-lucide="flag" size="22"></i><span class="text-[9px] mt-1 font-bold">Goals</span>
+            </button>
+            <button onclick="showSection('tracker')" class="nav-btn flex flex-col items-center text-gray-400 transition-colors" data-id="tracker">
+                <i data-lucide="layout-list" size="22"></i><span class="text-[9px] mt-1 font-bold">Syllabus</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Desktop Sidebar -->
+    <aside class="hidden md:flex fixed left-0 top-16 bottom-0 w-20 bg-white border-r flex-col items-center py-8 space-y-8 z-50">
+        <button onclick="showSection('dashboard')" class="p-3 rounded-xl hover:bg-blue-50 text-gray-400 group" title="Dashboard"><i data-lucide="home" class="group-hover:text-blue-600"></i></button>
+        <button onclick="showSection('daily-schedule')" class="p-3 rounded-xl hover:bg-blue-50 text-gray-400 group" title="Schedule"><i data-lucide="calendar" class="group-hover:text-blue-600"></i></button>
+        <button onclick="showSection('targets')" class="p-3 rounded-xl hover:bg-blue-50 text-gray-400 group" title="Deadlines"><i data-lucide="flag" class="group-hover:text-blue-600"></i></button>
+        <button onclick="showSection('tracker')" class="p-3 rounded-xl hover:bg-blue-50 text-gray-400 group" title="Tracker"><i data-lucide="layout-list" class="group-hover:text-blue-600"></i></button>
+    </aside>
+
+    <main class="max-w-7xl mx-auto p-4 md:ml-20 min-h-screen">
+        
+        <!-- DASHBOARD -->
+        <section id="dashboard" class="content-section space-y-4 md:space-y-6">
+            <!-- Hero Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+                <!-- Status & Progress -->
+                <div class="lg:col-span-2 glass-card p-5 md:p-6 bg-gradient-to-br from-blue-600 to-indigo-800 text-white border-none shadow-xl">
+                    <div class="flex flex-col md:flex-row justify-between gap-6">
+                        <div class="flex-1 space-y-4">
+                            <div>
+                                <p class="text-blue-100 text-[10px] font-bold uppercase tracking-wider mb-1">Target 2026</p>
+                                <h2 class="text-2xl md:text-3xl font-black">Mission MBBS 🩺</h2>
+                            </div>
+                            
+                            <div class="bg-white/10 p-4 rounded-2xl border border-white/10">
+                                <div class="flex justify-between items-end mb-2">
+                                    <p class="text-blue-100 text-[10px] font-bold uppercase tracking-tighter">Syllabus Progress</p>
+                                    <span id="overall-percent" class="text-lg font-black">0%</span>
+                                </div>
+                                <div class="w-full bg-blue-900/40 rounded-full h-2.5 overflow-hidden">
+                                    <div id="overall-progress-bar" class="bg-green-400 h-full rounded-full transition-all duration-700" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Stats on Mobile: Side by Side -->
+                        <div class="grid grid-cols-2 md:grid-cols-1 gap-3">
+                            <div id="selection-chance-card" class="bg-white/10 p-3 md:p-4 rounded-2xl backdrop-blur-md text-center border border-white/20">
+                                <p class="text-[9px] font-bold uppercase text-blue-100 leading-none mb-1">Chance</p>
+                                <p class="text-xl md:text-2xl font-black" id="selection-chance">0%</p>
+                                <p id="chance-label" class="text-[7px] font-bold uppercase text-white/60 tracking-tight">Analyzing...</p>
+                            </div>
+                            <div class="bg-white/20 p-3 md:p-4 rounded-2xl backdrop-blur-md text-center border border-white/20">
+                                <p class="text-[9px] font-bold uppercase leading-none mb-1">Days Left</p>
+                                <p class="text-xl md:text-2xl font-black" id="days-count">---</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Today's Target Card -->
+                <div class="glass-card p-5 md:p-6 flex flex-col shadow-md border-2 border-blue-50">
+                    <div class="flex justify-between items-center mb-4">
+                        <div class="flex items-center space-x-2">
+                            <div class="bg-blue-600 p-1.5 rounded-lg text-white">
+                                <i data-lucide="zap" size="16"></i>
+                            </div>
+                            <h3 class="font-bold text-gray-800 text-sm md:text-base">Aaj ka Schedule</h3>
+                        </div>
+                    </div>
+                    
+                    <div id="daily-preview-list" class="space-y-2.5 flex-grow overflow-y-auto max-h-[180px] md:max-h-[220px] pr-1 custom-scrollbar">
+                        <!-- Tasks go here -->
+                    </div>
+                    
+                    <button onclick="showSection('daily-schedule')" class="mt-5 w-full py-3 rounded-xl text-xs font-bold text-blue-600 bg-blue-50 active:bg-blue-100 transition flex items-center justify-center">
+                        <i data-lucide="plus" size="14" class="mr-1.5"></i> Update Plan
+                    </button>
+                </div>
+            </div>
+
+            <!-- Subject Performance -->
+            <div class="glass-card p-5 md:p-6 shadow-sm">
+                <h3 class="font-bold text-gray-700 text-sm md:text-base mb-6">Subject Progress <span class="font-normal text-[10px] text-gray-400 ml-2">(Click for Details)</span></h3>
+                <div class="grid grid-cols-3 gap-4" id="subject-circles"></div>
+            </div>
+        </section>
+
+        <!-- DAILY SCHEDULE SECTION -->
+        <section id="daily-schedule" class="content-section hidden space-y-6">
+            <div class="flex flex-col gap-4">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-xl md:text-2xl font-bold text-gray-800">Planner 📅</h2>
+                    <div class="flex items-center space-x-2 bg-white p-1 rounded-xl border shadow-sm scale-90 md:scale-100">
+                        <button onclick="changeScheduleDate(-1)" class="p-1.5 hover:bg-gray-100 rounded-lg"><i data-lucide="chevron-left" size="18"></i></button>
+                        <span id="schedule-date-label" class="text-xs font-bold px-3 text-blue-600 min-w-[80px] text-center">Today</span>
+                        <button onclick="changeScheduleDate(1)" class="p-1.5 hover:bg-gray-100 rounded-lg"><i data-lucide="chevron-right" size="18"></i></button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Form -->
+                    <div class="lg:col-span-1 glass-card p-5 md:p-6 border-t-4 border-blue-500 shadow-sm h-fit">
+                        <h3 class="font-bold mb-4 text-gray-700 text-sm">Add New Task</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="text-[10px] font-bold text-gray-400 uppercase">Subject</label>
+                                <select id="schedule-sub" onchange="populateScheduleChapters()" class="w-full mt-1 p-3 border rounded-xl text-sm bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500"></select>
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold text-gray-400 uppercase">Chapter</label>
+                                <select id="schedule-chap" class="w-full mt-1 p-3 border rounded-xl text-sm bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500"></select>
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold text-gray-400 uppercase">Custom Action</label>
+                                <input type="text" id="schedule-custom-input" placeholder="e.g. 50 MCQ Practice" class="w-full mt-1 p-3 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <button onclick="addScheduleTask()" class="w-full bg-blue-600 text-white py-3.5 rounded-xl font-bold shadow-lg active:scale-95 transition">Add to Plan</button>
+                        </div>
+                    </div>
+
+                    <!-- List -->
+                    <div class="lg:col-span-2 glass-card p-5 md:p-6 shadow-sm flex flex-col min-h-[300px]">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="font-bold text-gray-700 text-sm">Schedule List</h3>
+                            <div class="flex gap-2">
+                                <button onclick="moveIncompleteToTomorrow()" class="text-[9px] font-bold text-blue-600 hover:bg-blue-50 border border-blue-200 px-2 py-1.5 rounded-lg uppercase">Push Incomplete</button>
+                            </div>
+                        </div>
+                        <div id="schedule-list-container" class="space-y-3 flex-grow"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TARGETS SECTION -->
+        <section id="targets" class="content-section hidden space-y-6">
+            <h2 class="text-xl md:text-2xl font-bold text-gray-800">Deadlines 🎯</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="glass-card p-5 md:p-6 border-t-4 border-green-500 shadow-sm col-span-1">
+                    <h3 class="font-bold mb-4 text-gray-700 text-sm">Set Deadline</h3>
+                    <div class="space-y-4">
+                        <select id="lt-sub" onchange="populateLTChapters()" class="w-full p-3 border rounded-xl text-sm"></select>
+                        <select id="lt-chap" class="w-full p-3 border rounded-xl text-sm"></select>
+                        <input type="text" id="custom-target-input" placeholder="Custom Goal Name..." class="w-full p-3 border rounded-xl text-sm">
+                        <input type="date" id="lt-date" class="w-full p-3 border rounded-xl text-sm">
+                        <button onclick="addLTTarget()" class="w-full bg-green-600 text-white py-3.5 rounded-xl font-bold shadow-md">Create Goal</button>
+                    </div>
+                </div>
+                <div class="col-span-2 space-y-3" id="active-targets-list"></div>
+            </div>
+        </section>
+
+        <!-- SYLLABUS TRACKER SECTION -->
+        <section id="tracker" class="content-section hidden space-y-6">
+            <div class="flex justify-between items-center">
+                <h2 class="text-xl md:text-2xl font-bold text-gray-800">Checklist ✅</h2>
+                <select id="tracker-sub" onchange="renderTracker()" class="border p-2 rounded-xl text-xs font-bold bg-white"></select>
+            </div>
+            <div id="chapters-container" class="grid grid-cols-1 md:grid-cols-2 gap-3 pb-8"></div>
+        </section>
+
+    </main>
+
+    <script>
+        const chaptersData = {
+            Biology: [
+                { id: 'b1', name: '1. The Living World', weightage: 'Low' },
+                { id: 'b2', name: '2. Biological Classification', weightage: 'High' },
+                { id: 'b3', name: '3. Plant Kingdom', weightage: 'High' },
+                { id: 'b4', name: '4. Animal Kingdom', weightage: 'High' },
+                { id: 'b5', name: '5. Morphology of Flowering Plants', weightage: 'Medium' },
+                { id: 'b6', name: '6. Anatomy of Flowering Plants', weightage: 'Medium' },
+                { id: 'b7', name: '7. Structural Organisation in Animals', weightage: 'Medium' },
+                { id: 'b8', name: '8. Cell: The Unit of Life', weightage: 'High' },
+                { id: 'b9', name: '9. Biomolecules', weightage: 'High' },
+                { id: 'b10', name: '10. Cell Cycle and Cell Division', weightage: 'High' },
+                { id: 'b11', name: '11. Photosynthesis in Higher Plants', weightage: 'High' },
+                { id: 'b12', name: '12. Respiration in Plants', weightage: 'High' },
+                { id: 'b13', name: '13. Plant Growth and Development', weightage: 'Medium' },
+                { id: 'b14', name: '14. Breathing and Exchange of Gases', weightage: 'Medium' },
+                { id: 'b15', name: '15. Body Fluids and Circulation', weightage: 'Medium' },
+                { id: 'b16', name: '16. Excretory Products and their Elimination', weightage: 'Medium' },
+                { id: 'b17', name: '17. Locomotion and Movement', weightage: 'Medium' },
+                { id: 'b18', name: '18. Neural Control and Coordination', weightage: 'Medium' },
+                { id: 'b19', name: '19. Chemical Coordination and Integration', weightage: 'Medium' },
+                { id: 'b20', name: '20. Sexual Reproduction in Flowering Plants', weightage: 'High' },
+                { id: 'b21', name: '21. Human Reproduction', weightage: 'High' },
+                { id: 'b22', name: '22. Reproductive Health', weightage: 'High' },
+                { id: 'b23', name: '23. Principles of Inheritance and Variation', weightage: 'High' },
+                { id: 'b24', name: '24. Molecular Basis of Inheritance', weightage: 'High' },
+                { id: 'b25', name: '25. Evolution', weightage: 'High' },
+                { id: 'b26', name: '26. Human Health and Disease', weightage: 'High' },
+                { id: 'b27', name: '27. Microbes in Human Welfare', weightage: 'Medium' },
+                { id: 'b28', name: '28. Biotechnology: Principles and Processes', weightage: 'High' },
+                { id: 'b29', name: '29. Biotechnology and Its Applications', weightage: 'High' },
+                { id: 'b30', name: '30. Organisms and Populations', weightage: 'High' },
+                { id: 'b31', name: '31. Ecosystem', weightage: 'High' },
+                { id: 'b32', name: '32. Biodiversity and Conservation', weightage: 'High' }
+            ],
+            Physics: [
+                { id: 'p1', name: '1. Physics and Measurement', weightage: 'Low' },
+                { id: 'p2', name: '2. Kinematics', weightage: 'Medium' },
+                { id: 'p3', name: '3. Laws of Motion', weightage: 'Medium' },
+                { id: 'p4', name: '4. Work, Energy and Power', weightage: 'Medium' },
+                { id: 'p5', name: '5. Rotational Motion', weightage: 'High' },
+                { id: 'p6', name: '6. Gravitation', weightage: 'Medium' },
+                { id: 'p7', name: '7. Properties of Solids and Liquids', weightage: 'Medium' },
+                { id: 'p8', name: '8. Thermodynamics', weightage: 'High' },
+                { id: 'p9', name: '9. Kinetic Theory of Gases', weightage: 'Low' },
+                { id: 'p10', name: '10. Oscillations and Waves', weightage: 'Medium' },
+                { id: 'p11', name: '11. Electrostatics', weightage: 'High' },
+                { id: 'p12', name: '12. Current Electricity', weightage: 'High' },
+                { id: 'p13', name: '13. Magnetic Effects of Current and Magnetism', weightage: 'High' },
+                { id: 'p14', name: '14. Electromagnetic Induction and Alternating Currents', weightage: 'High' },
+                { id: 'p15', name: '15. Electromagnetic Waves', weightage: 'Low' },
+                { id: 'p16', name: '16. Optics', weightage: 'High' },
+                { id: 'p17', name: '17. Dual Nature of Matter and Radiation', weightage: 'Medium' },
+                { id: 'p18', name: '18. Atoms and Nuclei', weightage: 'Medium' },
+                { id: 'p19', name: '19. Electronic Devices', weightage: 'Medium' },
+                { id: 'p20', name: '20. Experimental Skills', weightage: 'Medium' }
+            ],
+            Chemistry: [
+                { id: 'c1', name: '1. Some Basic Concepts in Chemistry', weightage: 'Medium' },
+                { id: 'c2', name: '2. Atomic Structure', weightage: 'Medium' },
+                { id: 'c3', name: '3. Chemical Bonding and Molecular Structure', weightage: 'High' },
+                { id: 'c4', name: '4. Chemical Thermodynamics', weightage: 'High' },
+                { id: 'c5', name: '5. Solutions', weightage: 'Medium' },
+                { id: 'c6', name: '6. Equilibrium', weightage: 'High' },
+                { id: 'c7', name: '7. Redox Reactions and Electrochemistry', weightage: 'High' },
+                { id: 'c8', name: '8. Chemical Kinetics', weightage: 'Medium' },
+                { id: 'c9', name: '9. Classification of Elements and Periodicity in Properties', weightage: 'Low' },
+                { id: 'c10', name: '10. P-Block Elements', weightage: 'High' },
+                { id: 'c11', name: '11. d and f Block Elements', weightage: 'Medium' },
+                { id: 'c12', name: '12. Coordination Compounds', weightage: 'High' },
+                { id: 'c13', name: '13. Purification and Characterisation of Organic Compounds', weightage: 'Low' },
+                { id: 'c14', name: '14. Some Basic Principles of Organic Chemistry', weightage: 'High' },
+                { id: 'c15', name: '15. Hydrocarbons', weightage: 'High' },
+                { id: 'c16', name: '16. Organic Compounds Containing Halogens', weightage: 'Medium' },
+                { id: 'c17', name: '17. Organic Compounds Containing Oxygen', weightage: 'High' },
+                { id: 'c18', name: '18. Organic Compounds Containing Nitrogen', weightage: 'Medium' },
+                { id: 'c19', name: '19. Biomolecules', weightage: 'Medium' },
+                { id: 'c20', name: '20. Principles Related to Practical Chemistry', weightage: 'Low' }
+            ]
+        };
+
+        let state = JSON.parse(localStorage.getItem('neet_focus_v8_state')) || {
+            progress: {},
+            targets: [], 
+            dailySchedules: {}, 
+            streak: 0,
+            lastVisit: null
+        };
+
+        let currentScheduleDate = new Date().toISOString().split('T')[0];
+
+        function save() {
+            localStorage.setItem('neet_focus_v8_state', JSON.stringify(state));
+            updateDashboard();
+            renderDailySchedule();
+        }
+
+        window.showSection = (id) => {
+            document.querySelectorAll('.content-section').forEach(s => s.classList.add('hidden'));
+            document.getElementById(id).classList.remove('hidden');
+            
+            // UI Button Active State
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                if(btn.dataset.id === id) btn.classList.add('text-blue-600');
+                else btn.classList.remove('text-blue-600');
+            });
+
+            if (id === 'dashboard') updateDashboard();
+            if (id === 'tracker') renderTracker();
+            if (id === 'daily-schedule') { populateScheduleChapters(); renderDailySchedule(); }
+            if (id === 'targets') { populateLTChapters(); renderActiveTargets(); }
+            window.scrollTo(0,0);
+        };
+
+        // --- MODAL ---
+        window.openSubjectDetail = (sub) => {
+            const modal = document.getElementById('subject-modal');
+            const doneList = document.getElementById('modal-done-list');
+            const todoList = document.getElementById('modal-todo-list');
+            document.getElementById('modal-title').innerText = `${sub} Summary`;
+            
+            doneList.innerHTML = ''; todoList.innerHTML = '';
+
+            chaptersData[sub].forEach(c => {
+                const isDone = (state.progress[c.id]?.ncert >= 1);
+                const item = `<div class="p-3 bg-gray-50 rounded-xl border border-gray-100 font-medium text-xs">${c.name}</div>`;
+                if(isDone) doneList.innerHTML += item; else todoList.innerHTML += item;
+            });
+
+            if(!doneList.innerHTML) doneList.innerHTML = '<p class="text-gray-400 italic text-xs">Nothing yet.</p>';
+            if(!todoList.innerHTML) todoList.innerHTML = '<p class="text-green-500 font-bold text-xs">All done! 🚀</p>';
+
+            modal.style.display = 'flex';
+        };
+        window.closeModal = () => { document.getElementById('subject-modal').style.display = 'none'; };
+
+        // --- DAILY PLANNER ---
+        window.changeScheduleDate = (offset) => {
+            let d = new Date(currentScheduleDate);
+            d.setDate(d.getDate() + offset);
+            currentScheduleDate = d.toISOString().split('T')[0];
+            renderDailySchedule();
+        };
+
+        window.populateScheduleChapters = () => {
+            const sub = document.getElementById('schedule-sub').value;
+            const select = document.getElementById('schedule-chap');
+            if(!select) return;
+            select.innerHTML = chaptersData[sub].map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+        };
+
+        window.addScheduleTask = () => {
+            const sub = document.getElementById('schedule-sub').value;
+            const chapId = document.getElementById('schedule-chap').value;
+            const chapName = chaptersData[sub].find(c => c.id === chapId).name;
+            const customText = document.getElementById('schedule-custom-input').value.trim();
+            const taskText = customText !== "" ? customText : chapName;
+            
+            if(!state.dailySchedules[currentScheduleDate]) state.dailySchedules[currentScheduleDate] = [];
+            state.dailySchedules[currentScheduleDate].push({ 
+                id: Date.now(), task: taskText, completed: false, subject: sub, linkedChapterId: customText === "" ? chapId : null 
+            });
+            document.getElementById('schedule-custom-input').value = '';
+            save();
+        };
+
+        window.toggleScheduleTask = (id, dateKey = currentScheduleDate) => {
+            const tasks = state.dailySchedules[dateKey] || [];
+            const task = tasks.find(t => t.id === id);
+            if(task) {
+                task.completed = !task.completed;
+                if(task.linkedChapterId) {
+                    if(!state.progress[task.linkedChapterId]) state.progress[task.linkedChapterId] = { ncert: 0, mcq: 0 };
+                    state.progress[task.linkedChapterId].ncert = task.completed ? 1 : 0;
+                }
+            }
+            save();
+        };
+
+        window.moveIncompleteToTomorrow = () => {
+            const tasks = state.dailySchedules[currentScheduleDate] || [];
+            const incomplete = tasks.filter(t => !t.completed);
+            if(!incomplete.length) return;
+            let tomorrow = new Date(currentScheduleDate);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const key = tomorrow.toISOString().split('T')[0];
+            if(!state.dailySchedules[key]) state.dailySchedules[key] = [];
+            incomplete.forEach(t => state.dailySchedules[key].push({...t, id: Date.now()+Math.random()}));
+            state.dailySchedules[currentScheduleDate] = tasks.filter(t => t.completed);
+            save();
+        };
+
+        function renderDailySchedule() {
+            const container = document.getElementById('schedule-list-container');
+            const dateLabel = document.getElementById('schedule-date-label');
+            const todayKey = new Date().toISOString().split('T')[0];
+            dateLabel.innerText = currentScheduleDate === todayKey ? 'Today' : currentScheduleDate;
+            const tasks = state.dailySchedules[currentScheduleDate] || [];
+            container.innerHTML = tasks.length ? tasks.map(t => `
+                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 group">
+                    <div class="flex items-center space-x-3">
+                        <input type="checkbox" ${t.completed ? 'checked' : ''} onchange="toggleScheduleTask(${t.id})" class="w-5 h-5 text-blue-600 rounded-lg border-gray-300">
+                        <div class="flex flex-col">
+                            <span class="text-sm font-semibold text-gray-700 ${t.completed ? 'line-through text-gray-400' : ''}">${t.task}</span>
+                            <span class="text-[9px] font-black uppercase text-blue-400">${t.subject}</span>
+                        </div>
+                    </div>
+                    <button onclick="state.dailySchedules['${currentScheduleDate}'] = state.dailySchedules['${currentScheduleDate}'].filter(x=>x.id!==${t.id}); save();" class="text-gray-300 hover:text-red-500"><i data-lucide="trash-2" size="16"></i></button>
+                </div>`).join('') : '<p class="py-10 text-center text-gray-400 text-xs">Aaram karke kya karoge? Plan banao!</p>';
+            lucide.createIcons();
+        }
+
+        // --- DASHBOARD UPDATES ---
+        function updateDashboard() {
+            const neetDate = new Date("May 4, 2026").getTime();
+            const now = new Date().getTime();
+            const diff = Math.floor((neetDate - now) / (1000 * 60 * 60 * 24));
+            document.getElementById('days-count').innerText = diff > 0 ? diff : "EXAM";
+
+            const todayKey = new Date().toISOString().split('T')[0];
+            const todayTasks = state.dailySchedules[todayKey] || [];
+            document.getElementById('daily-preview-list').innerHTML = todayTasks.length ? todayTasks.map(t => `
+                <div class="flex items-center justify-between p-3 bg-white border border-gray-100 rounded-xl">
+                    <div class="flex items-center space-x-3 overflow-hidden">
+                        <input type="checkbox" ${t.completed ? 'checked' : ''} onchange="toggleScheduleTask(${t.id}, '${todayKey}')" class="w-4 h-4 rounded text-blue-600 border-gray-200">
+                        <span class="text-[11px] font-bold text-gray-700 truncate ${t.completed ? 'line-through text-gray-300' : ''}">${t.task}</span>
+                    </div>
+                    <i data-lucide="${t.completed ? 'check-circle-2' : 'circle'}" class="w-3 h-3 ${t.completed ? 'text-green-500' : 'text-gray-200'} shrink-0"></i>
+                </div>`).join('') : '<p class="text-gray-300 text-[10px] text-center py-4 italic">No tasks. Target set karo!</p>';
+
+            let totalCh = 0, doneCh = 0, totalMcq = 0, revPoints = 0;
+            const circles = document.getElementById('subject-circles');
+            circles.innerHTML = Object.keys(chaptersData).map(sub => {
+                const total = chaptersData[sub].length;
+                const completed = chaptersData[sub].filter(c => {
+                    const p = state.progress[c.id];
+                    if(p) { totalMcq += (p.mcq || 0); revPoints += Math.max(0, (p.ncert||0)-1); }
+                    return (p?.ncert >= 1);
+                }).length;
+                const pct = Math.round((completed / total) * 100) || 0;
+                totalCh += total; doneCh += completed;
+                return `
+                    <div class="text-center cursor-pointer group" onclick="openSubjectDetail('${sub}')">
+                        <div class="relative w-12 h-12 md:w-16 md:h-16 mx-auto group-hover:scale-110 transition">
+                            <svg class="w-full h-full" viewBox="0 0 36 36">
+                                <path class="stroke-current text-gray-100" stroke-width="3" fill="none" d="M18 2 a 16 16 0 0 1 0 32 a 16 16 0 0 1 0 -32" />
+                                <path class="stroke-current text-blue-600" stroke-dasharray="${pct}, 100" stroke-width="3" stroke-linecap="round" fill="none" d="M18 2 a 16 16 0 0 1 0 32 a 16 16 0 0 1 0 -32" />
+                            </svg>
+                            <span class="absolute inset-0 flex items-center justify-center text-[10px] md:text-xs font-black text-gray-700">${pct}%</span>
+                        </div>
+                        <p class="text-[9px] md:text-[10px] mt-2 font-bold text-gray-400 uppercase truncate">${sub}</p>
+                    </div>`;
+            }).join('');
+
+            const overallPct = Math.round((doneCh / totalCh) * 100) || 0;
+            document.getElementById('overall-percent').innerText = `${overallPct}%`;
+            document.getElementById('overall-progress-bar').style.width = `${overallPct}%`;
+
+            // Selection Chance Logic
+            const cWeight = overallPct * 0.6;
+            const mPct = Math.min(100, (totalMcq / (totalCh * 100)) * 100);
+            const mWeight = mPct * 0.3;
+            const rPct = Math.min(100, (revPoints / (totalCh * 2)) * 100);
+            const rWeight = rPct * 0.1;
+            const sChance = Math.round(cWeight + mWeight + rWeight);
+
+            const cEl = document.getElementById('selection-chance');
+            const lEl = document.getElementById('chance-label');
+            const card = document.getElementById('selection-chance-card');
+            cEl.innerText = `${sChance}%`;
+            if(sChance < 35) { cEl.className = "text-xl md:text-2xl font-black text-red-400"; lEl.innerText = "Padhna Shuru Karo!"; card.className = card.className.replace('pulse-green',''); }
+            else if(sChance < 70) { cEl.className = "text-xl md:text-2xl font-black text-yellow-300"; lEl.innerText = "Sahi Ja Rahe Ho"; card.className = card.className.replace('pulse-green',''); }
+            else { cEl.className = "text-xl md:text-2xl font-black text-green-400"; lEl.innerText = "Selection Pakka! 🔥"; if(!card.className.includes('pulse-green')) card.className += ' pulse-green'; }
+
+            const today = new Date().toDateString();
+            if (state.lastVisit !== today) {
+                state.streak = (state.lastVisit === new Date(Date.now()-86400000).toDateString()) ? state.streak+1 : 1;
+                state.lastVisit = today; save();
+            }
+            document.getElementById('streak-count').innerText = `${state.streak} Days`;
+            lucide.createIcons();
+        }
+
+        // --- TRACKER & TARGETS ---
+        window.populateLTChapters = () => {
+            const sub = document.getElementById('lt-sub').value;
+            document.getElementById('lt-chap').innerHTML = chaptersData[sub].map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+        };
+        window.addLTTarget = () => {
+            const sub = document.getElementById('lt-sub').value;
+            const id = document.getElementById('lt-chap').value;
+            const custom = document.getElementById('custom-target-input').value.trim();
+            const date = document.getElementById('lt-date').value;
+            const finalName = custom !== "" ? custom : chaptersData[sub].find(c=>c.id===id).name;
+            if(!date || !finalName) return;
+            state.targets.push({ id: Date.now(), chapter: finalName, deadline: date, linkedId: custom===""?id:null });
+            document.getElementById('custom-target-input').value = ''; save(); renderActiveTargets();
+        };
+        function renderActiveTargets() {
+            document.getElementById('active-targets-list').innerHTML = state.targets.length ? state.targets.map(t => `
+                <div class="bg-white p-4 rounded-2xl flex justify-between items-center text-sm border">
+                    <div class="min-w-0 flex-1 mr-2"><p class="font-bold truncate text-gray-800">${t.chapter}</p><p class="text-[9px] text-red-500 font-bold uppercase mt-1">Dead: ${t.deadline}</p></div>
+                    <button onclick="state.targets=state.targets.filter(x=>x.id!==${t.id}); save(); renderActiveTargets();" class="text-gray-300 p-2"><i data-lucide="trash-2" size="16"></i></button>
+                </div>`).join('') : '<p class="text-gray-400 text-xs text-center py-6">No deadlines yet.</p>';
+            lucide.createIcons();
+        }
+        window.renderTracker = () => {
+            const sub = document.getElementById('tracker-sub').value;
+            document.getElementById('chapters-container').innerHTML = chaptersData[sub].map(c => {
+                const p = state.progress[c.id] || { ncert: 0, mcq: 0 };
+                return `<div class="glass-card p-4 flex justify-between items-center">
+                    <div class="flex-1"><p class="font-bold text-xs text-gray-800">${c.name}</p><p class="text-[8px] text-gray-400 font-bold uppercase">${c.weightage}</p></div>
+                    <div class="flex space-x-3">
+                        <div class="text-center"><p class="text-[8px] font-bold text-gray-400 mb-1">NCERT</p><input type="number" value="${p.ncert}" onchange="window.updateProgress('${c.id}', 'ncert', this.value)" class="w-8 border rounded text-[10px] text-center font-bold"></div>
+                        <div class="text-center"><p class="text-[8px] font-bold text-gray-400 mb-1">MCQ</p><input type="number" step="50" value="${p.mcq}" onchange="window.updateProgress('${c.id}', 'mcq', this.value)" class="w-12 border rounded text-[10px] text-center font-bold"></div>
+                    </div>
+                </div>`;
+            }).join('');
+        };
+        window.updateProgress = (id, f, v) => { if(!state.progress[id]) state.progress[id]={ncert:0,mcq:0}; state.progress[id][f]=Number(v); save(); };
+
+        window.onload = () => {
+            ['lt-sub', 'tracker-sub', 'schedule-sub'].forEach(id => {
+                document.getElementById(id).innerHTML = Object.keys(chaptersData).map(s => `<option value="${s}">${s}</option>`).join('');
+            });
+            updateDashboard(); lucide.createIcons(); populateLTChapters(); populateScheduleChapters();
+        }
+    </script>
+</body>
+</html>
